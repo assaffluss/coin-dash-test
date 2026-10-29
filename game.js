@@ -6,7 +6,9 @@ class CoinDash extends Phaser.Scene {
     const c = COIN_DASH;
     this.score = 0;
     this.finished = false;
-    this.deadline = this.time.now + c.roundSeconds * 1000;
+    this.roundStartedAt = this.time.now;
+    this.deadline = this.roundStartedAt + c.roundSeconds * 1000;
+    this.droneSpeed = c.droneSpeed;
     this.physics.world.setBounds(0, 44, c.width, c.height - 44);
     this.add.grid(c.width / 2, c.height / 2, c.width, c.height, 40, 40,
       c.colors.background, 1, 0x24334b, 0.45);
@@ -49,8 +51,22 @@ class CoinDash extends Phaser.Scene {
     this.coin.body.reset(x, y);
   }
 
-  update() {
+  update(time, delta) {
     if (this.finished) return;
+    const c = COIN_DASH;
+    const elapsedSeconds = Math.max(0, (this.time.now - this.roundStartedAt) / 1000);
+    const speedSteps = Math.floor(elapsedSeconds / c.droneSpeedIntervalSeconds);
+    const targetSpeed = Math.min(c.droneMaxSpeed, c.droneSpeed + speedSteps * c.droneSpeedStep);
+    // Ease into each 10-second increase without changing the current bounce direction.
+    this.droneSpeed = Math.min(targetSpeed, this.droneSpeed + c.droneAcceleration * delta / 1000);
+    this.drones.children.iterate(drone => {
+      const velocity = drone.body.velocity;
+      const speed = Math.hypot(velocity.x, velocity.y);
+      if (speed > 0) {
+        drone.body.setVelocity(velocity.x / speed * this.droneSpeed,
+          velocity.y / speed * this.droneSpeed);
+      }
+    });
     const dx = Number(this.cursors.right.isDown || this.keys.D.isDown)
       - Number(this.cursors.left.isDown || this.keys.A.isDown);
     const dy = Number(this.cursors.down.isDown || this.keys.S.isDown)
