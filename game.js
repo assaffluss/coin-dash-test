@@ -15,6 +15,9 @@ class CoinDash extends Phaser.Scene {
     this.physics.add.existing(this.player);
     this.player.body.setCollideWorldBounds(true);
     this.coin = this.add.circle(100, 100, 9, c.colors.coin);
+    this.coinLabel = this.add.text(100, 78, '+3', {
+      font: 'bold 16px monospace', color: '#fff4b0', stroke: '#101c31', strokeThickness: 3
+    }).setOrigin(0.5);
     this.physics.add.existing(this.coin);
     this.coin.body.setCircle(9);
     this.placeCoin();
@@ -28,7 +31,7 @@ class CoinDash extends Phaser.Scene {
     }
     this.physics.add.overlap(this.player, this.coin, () => {
       if (this.finished) return;
-      this.score++;
+      this.score += this.coinPoints;
       this.placeCoin();
     });
     this.physics.add.overlap(this.player, this.drones, () => this.finish('A drone caught you!'));
@@ -45,6 +48,11 @@ class CoinDash extends Phaser.Scene {
       x = Phaser.Math.Between(25, c.width - 25);
       y = Phaser.Math.Between(70, c.height - 25);
     } while (Phaser.Math.Distance.Between(x, y, this.player.x, this.player.y) < 60);
+    this.coinPoints = Math.random() < c.goldenCoinChance ? 3 : 1;
+    const isGolden = this.coinPoints === 3;
+    this.coin.setFillStyle(isGolden ? c.colors.goldenCoin : c.colors.coin);
+    this.coin.setStrokeStyle(isGolden ? 4 : 0, 0xfff4b0);
+    this.coinLabel.setPosition(x, y - 22).setVisible(isGolden);
     this.coin.setPosition(x, y);
     this.coin.body.reset(x, y);
   }
@@ -58,7 +66,7 @@ class CoinDash extends Phaser.Scene {
     const direction = new Phaser.Math.Vector2(dx, dy).normalize().scale(COIN_DASH.playerSpeed);
     this.player.body.setVelocity(direction.x, direction.y);
     const seconds = Math.max(0, Math.ceil((this.deadline - this.time.now) / 1000));
-    this.hud.setText(`Coins: ${this.score}                       Time: ${seconds}s`);
+    this.hud.setText(`Score: ${this.score}                       Time: ${seconds}s`);
     if (seconds === 0) this.finish('Time is up!');
   }
 
@@ -69,7 +77,7 @@ class CoinDash extends Phaser.Scene {
     const c = COIN_DASH;
     this.add.rectangle(c.width / 2, c.height / 2, 460, 150, 0x0a1120, 0.95);
     this.add.text(c.width / 2, c.height / 2,
-      `${reason}\n${this.score} coins collected\nPress R to try again`,
+      `${reason}\n${this.score} points scored\nPress R to try again`,
       { font: '24px monospace', color: '#ffffff', align: 'center', lineSpacing: 12 }
     ).setOrigin(0.5);
   }
