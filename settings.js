@@ -5,6 +5,10 @@ window.COIN_DASH = {
   roundSeconds: 60,
   playerSpeed: 240,
   droneSpeed: 105,
+  droneSpeedIntervalSeconds: 10,
+  droneSpeedStep: 15,
+  droneMaxSpeed: 180,
+  droneAcceleration: 30,
   droneCount: 3,
   colors: { background: 0x101c31, player: 0x71e8ce, coin: 0xffd166, drone: 0xff657a }
 };

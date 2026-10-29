@@ -55,6 +55,7 @@ class CoinDash extends Phaser.Scene {
     this.paused = false;
     // Deadline is set on the first update so it counts from when this scene actually runs.
     this.deadline = 0;
+    this.droneSpeed = c.droneSpeed;
     this.physics.world.setBounds(0, 44, c.width, c.height - 44);
     this.add.grid(c.width / 2, c.height / 2, c.width, c.height, 40, 40,
       c.colors.background, 1, 0x24334b, 0.45);
@@ -114,15 +115,30 @@ class CoinDash extends Phaser.Scene {
     this.coin.body.reset(x, y);
   }
 
-  update() {
+  update(time, delta) {
     if (this.finished || this.paused) return;
+    const c = COIN_DASH;
+    if (!this.deadline) this.deadline = this.time.now + c.roundSeconds * 1000;
+    // Derive elapsed time from the deadline so paused time doesn't speed up the drones.
+    const elapsedSeconds = Math.max(0, c.roundSeconds - (this.deadline - this.time.now) / 1000);
+    const speedSteps = Math.floor(elapsedSeconds / c.droneSpeedIntervalSeconds);
+    const targetSpeed = Math.min(c.droneMaxSpeed, c.droneSpeed + speedSteps * c.droneSpeedStep);
+    // Ease into each 10-second increase without changing the current bounce direction.
+    this.droneSpeed = Math.min(targetSpeed, this.droneSpeed + c.droneAcceleration * delta / 1000);
+    this.drones.children.iterate(drone => {
+      const velocity = drone.body.velocity;
+      const speed = Math.hypot(velocity.x, velocity.y);
+      if (speed > 0) {
+        drone.body.setVelocity(velocity.x / speed * this.droneSpeed,
+          velocity.y / speed * this.droneSpeed);
+      }
+    });
     const dx = Number(this.cursors.right.isDown || this.keys.D.isDown)
       - Number(this.cursors.left.isDown || this.keys.A.isDown);
     const dy = Number(this.cursors.down.isDown || this.keys.S.isDown)
       - Number(this.cursors.up.isDown || this.keys.W.isDown);
     const direction = new Phaser.Math.Vector2(dx, dy).normalize().scale(COIN_DASH.playerSpeed);
     this.player.body.setVelocity(direction.x, direction.y);
-    if (!this.deadline) this.deadline = this.time.now + COIN_DASH.roundSeconds * 1000;
     const seconds = Math.max(0, Math.ceil((this.deadline - this.time.now) / 1000));
     this.hud.setText(`Coins: ${this.score}                       Time: ${seconds}s`);
     if (seconds === 0) this.finish('Time is up!');
